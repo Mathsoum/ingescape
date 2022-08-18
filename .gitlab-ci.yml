@@ -642,7 +642,7 @@ lib-installer-runtime-android-armv7a-softfp:
 ## Debian (.deb package)
 ##
 
-build-deb-packages:
+build-and-publish-deb-packages:
   extends: .lib-build-files
   stage: delivery
   tags:
@@ -847,6 +847,10 @@ deploy-node-js:
     - cd bindings/javascript-node
     - npm publish
   dependencies:
+    - binding-node-js-macos
+    - binding-node-js-linux
+    - binding-node-js-windows
+  needs:
     - binding-node-js-macos
     - binding-node-js-linux
     - binding-node-js-windows
