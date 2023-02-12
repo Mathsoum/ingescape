@@ -2,9 +2,9 @@ name: CMake
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "test_github_actions_for_ci" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "test_github_actions_for_ci" ]
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
