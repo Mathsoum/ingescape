@@ -4,35 +4,32 @@
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
-
 pub mod igs {
     use super::*;
     pub fn version() -> i32 {
-        unsafe {
-            return igs_version()
-        }
+        unsafe { return igs_version() }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::ptr;
     use std::ffi::CStr;
     use std::ffi::CString;
-    use std::str;
     use std::os::raw::c_char;
+    use std::ptr;
+    use std::str;
 
     #[test]
     fn test_simple_igs_version() {
         unsafe {
-            assert_eq!(igs_version(), 030801);
+            assert_eq!(igs_version(), 040105);
         }
     }
 
     #[test]
     fn test_version() {
-        assert_eq!(igs::version(), 030801);
+        assert_eq!(igs::version(), 040105);
     }
 
     pub unsafe fn convert_str(input: &str) -> *mut c_char {
