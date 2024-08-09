@@ -2,7 +2,7 @@
 
 ## Building & testing
 Building the binding can be done with `cargo build` directly in this directory.
-Tests can be launched with `cargo test`, also directly in this directory.
+To run the tests, simply run the script `run_tests.sh`.
 
 **IMPORTANT NOTE**
 Rust tests are run in parallel by default.
@@ -13,6 +13,12 @@ cargo test -- --test-threads 1
 ```
 The tests should pass when executed in sequence, not in parallel.
 
+As a side note, tests can be run with `--nocapture` so printed text in the tests is not hidden, even when the tests pass.
+```sh
+cargo test -- --nocapture --test-threads 1
+```
+
+The script run_tests.sh simply run this command with those parameters.
 
 ## Try it out
 The binding itself is auto-generated using bindgen from the ingescape C headers.
