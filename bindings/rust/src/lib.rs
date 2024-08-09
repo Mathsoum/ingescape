@@ -6,8 +6,137 @@ include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
 pub mod igs {
     use super::*;
+    use std::ffi::CStr;
+    use std::ffi::CString;
+
+    pub const LOG_TRACE: igs_log_level_t = igs_log_level_t_IGS_LOG_TRACE;
+    pub const LOG_DEBUG: igs_log_level_t = igs_log_level_t_IGS_LOG_DEBUG;
+    pub const LOG_INFO: igs_log_level_t = igs_log_level_t_IGS_LOG_INFO;
+    pub const LOG_WARN: igs_log_level_t = igs_log_level_t_IGS_LOG_WARN;
+    pub const LOG_ERROR: igs_log_level_t = igs_log_level_t_IGS_LOG_ERROR;
+    pub const LOG_FATAL: igs_log_level_t = igs_log_level_t_IGS_LOG_FATAL;
+
+    fn make_safe_string_from_c(c_buf: *mut i8) -> String {
+        unsafe {
+            return CStr::from_ptr(c_buf).to_string_lossy().into_owned();
+        }
+    }
+
     pub fn version() -> i32 {
         unsafe { return igs_version() }
+    }
+
+    pub fn agent_name() -> String {
+        unsafe {
+            return make_safe_string_from_c(igs_agent_name());
+        }
+    }
+
+    pub fn agent_set_name(name: &str) {
+        let c_str = CString::new(name).expect("CString::new failed");
+        unsafe {
+            igs_agent_set_name(c_str.as_ptr());
+        }
+    }
+
+    pub fn agent_family() -> Option<String> {
+        unsafe {
+            let fam_c: *mut i8 = igs_agent_family();
+            if fam_c.is_null() {
+                return None;
+            }
+            return Some(make_safe_string_from_c(fam_c));
+        }
+    }
+
+    pub fn agent_set_family(family: &str) {
+        let c_str = CString::new(family).expect("CString::new failed");
+        unsafe {
+            igs_agent_set_family(c_str.as_ptr());
+        }
+    }
+
+    pub fn log_console() -> bool {
+        unsafe {
+            return igs_log_console();
+        }
+    }
+
+    pub fn log_set_console(b: bool) {
+        unsafe {
+            igs_log_set_console(b);
+        }
+    }
+
+    pub fn log_syslog() -> bool {
+        unsafe {
+            return igs_log_syslog();
+        }
+    }
+
+    pub fn log_set_syslog(b: bool) {
+        unsafe {
+            igs_log_set_syslog(b);
+        }
+    }
+
+    pub fn log_console_color() -> bool {
+        unsafe {
+            return igs_log_console_color();
+        }
+    }
+
+    pub fn log_set_console_color(b: bool) {
+        unsafe {
+            igs_log_set_console_color(b);
+        }
+    }
+
+    pub fn log_stream() -> bool {
+        unsafe {
+            return igs_log_stream();
+        }
+    }
+
+    pub fn log_set_stream(b: bool) {
+        unsafe {
+            igs_log_set_stream(b);
+        }
+    }
+
+    pub fn log_file() -> bool {
+        unsafe {
+            return igs_log_file();
+        }
+    }
+
+    pub fn log_file_path() -> Option<String> {
+        unsafe {
+            let path_c: *mut i8 = igs_log_file_path();
+            if path_c.is_null() {
+                return None;
+            }
+            return Some(make_safe_string_from_c(path_c));
+        }
+    }
+
+    pub fn log_set_file_path(path: &str) {
+        let c_str = CString::new(path).expect("CString::new failed");
+        unsafe {
+            igs_log_set_file_path(c_str.as_ptr());
+        }
+    }
+
+    pub fn log_console_level() -> igs_log_level_t {
+        unsafe {
+            return igs_log_console_level();
+        }
+    }
+
+    pub fn log_set_console_level(level: igs_log_level_t) {
+        unsafe {
+            igs_log_set_console_level(level);
+        }
     }
 }
 
@@ -18,10 +147,9 @@ mod tests {
     use std::ffi::CString;
     use std::ptr;
 
-    #[test]
-    fn test_simple_igs_version() {
+    fn make_safe_string_from_c(c_buf: *mut i8) -> String {
         unsafe {
-            assert_eq!(igs_version(), 040105);
+            return CStr::from_ptr(c_buf).to_string_lossy().into_owned();
         }
     }
 
@@ -30,75 +158,60 @@ mod tests {
         assert_eq!(igs::version(), 040105);
     }
 
-    fn make_safe_string_from_c(c_buf: *mut i8) -> String {
-        unsafe { CStr::from_ptr(c_buf).to_string_lossy().into_owned() }
-    }
-
-    #[test]
-    fn test_net_devices_and_addresses() {
-        unsafe {
-            let mut s1 = 0;
-            let mut s2 = 0;
-            igs_net_devices_list(ptr::addr_of_mut!(s1));
-            igs_net_addresses_list(ptr::addr_of_mut!(s2));
-            assert_eq!(s1, s2);
-        }
-    }
-
     #[test]
     fn test_agent_name() {
-        unsafe {
-            let str1 = make_safe_string_from_c(igs_agent_name());
-            assert_eq!(str1, "no_name");
-            let c_str = CString::new("simple Demo Agent").expect("CString::new failed");
-            igs_agent_set_name(c_str.as_ptr());
-            let str2 = make_safe_string_from_c(igs_agent_name());
-            assert_eq!(str2, "simple_Demo_Agent");
-        }
+        assert_eq!(igs::agent_name(), "no_name");
+        igs::agent_set_name("simple Demo Agent");
+        assert_eq!(igs::agent_name(), "simple_Demo_Agent");
     }
 
     #[test]
     fn test_agent_family() {
-        unsafe {
-            let c_str: *mut i8 = igs_agent_family();
-            assert!(c_str.is_null());
-            let c_str = CString::new("family_test").expect("CString::new failed");
-            igs_agent_set_family(c_str.as_ptr());
-            let c_str: *mut i8 = igs_agent_family();
-            let str = make_safe_string_from_c(c_str);
-            assert_eq!(str, "family_test");
-        }
+        assert_eq!(igs::agent_family(), None);
+        igs::agent_set_family("family_test");
+        assert_eq!(igs::agent_family(), Some("family_test".to_string()));
     }
+
+    //
+    // UNSAFE
+    //
 
     #[test]
     fn test_igs_logs() {
-        unsafe {
-            assert!(!igs_log_console());
-            igs_log_set_console(true);
-            assert!(igs_log_console());
+        assert!(!igs::log_console());
+        igs::log_set_console(true);
+        assert!(igs::log_console());
 
-            assert!(!igs_log_syslog());
-            igs_log_set_syslog(true);
-            assert!(igs_log_syslog());
+        assert!(!igs::log_syslog());
+        igs::log_set_syslog(true);
+        assert!(igs::log_syslog());
 
-            assert!(!igs_log_console_color());
-            igs_log_set_console_color(true);
-            assert!(igs_log_console_color());
+        assert!(!igs::log_console_color());
+        igs::log_set_console_color(true);
+        assert!(igs::log_console_color());
 
-            assert!(!igs_log_stream());
-            igs_log_set_stream(true);
-            assert!(igs_log_stream());
+        assert!(!igs::log_stream());
+        igs::log_set_stream(true);
+        assert!(igs::log_stream());
 
-            assert!(!igs_log_file());
-            assert!(igs_log_file_path().is_null());
-            let c_str = CString::new("/tmp/log.txt").expect("CString::new failed");
-            igs_log_set_file_path(c_str.as_ptr());
-            let path = make_safe_string_from_c(igs_log_file_path());
-            assert_eq!(path, "/tmp/log.txt");
+        assert!(!igs::log_file());
+        assert_eq!(igs::log_file_path(), None);
+        igs::log_set_file_path("/tmp/log.txt");
+        assert_eq!(igs::log_file_path(), Some("/tmp/log.txt".to_string()));
 
-            igs_log_set_console_level(igs_log_level_t_IGS_LOG_TRACE);
-            assert_eq!(igs_log_console_level(), igs_log_level_t_IGS_LOG_TRACE);
-        }
+        // Here we test all LOG_XXX constants so they are used somewhere and no unused warning is raised
+        igs::log_set_console_level(igs::LOG_TRACE);
+        assert_eq!(igs::log_console_level(), igs::LOG_TRACE);
+        igs::log_set_console_level(igs::LOG_DEBUG);
+        assert_eq!(igs::log_console_level(), igs::LOG_DEBUG);
+        igs::log_set_console_level(igs::LOG_INFO);
+        assert_eq!(igs::log_console_level(), igs::LOG_INFO);
+        igs::log_set_console_level(igs::LOG_WARN);
+        assert_eq!(igs::log_console_level(), igs::LOG_WARN);
+        igs::log_set_console_level(igs::LOG_ERROR);
+        assert_eq!(igs::log_console_level(), igs::LOG_ERROR);
+        igs::log_set_console_level(igs::LOG_FATAL);
+        assert_eq!(igs::log_console_level(), igs::LOG_FATAL);
     }
 
     #[test]
@@ -138,6 +251,17 @@ mod tests {
             assert!(igs_is_frozen());
             igs_unfreeze();
             assert!(!igs_is_frozen());
+        }
+    }
+
+    #[test]
+    fn test_net_devices_and_addresses() {
+        unsafe {
+            let mut s1 = 0;
+            let mut s2 = 0;
+            igs_net_devices_list(ptr::addr_of_mut!(s1));
+            igs_net_addresses_list(ptr::addr_of_mut!(s2));
+            assert_eq!(s1, s2);
         }
     }
 }
