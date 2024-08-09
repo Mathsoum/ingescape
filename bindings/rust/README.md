@@ -4,6 +4,16 @@
 Building the binding can be done with `cargo build` directly in this directory.
 Tests can be launched with `cargo test`, also directly in this directory.
 
+**IMPORTANT NOTE**
+Rust tests are run in parallel by default.
+Doing so make sometimes the tests fails on `char*` values from C null or with the wrong value.
+To avoid that behavior, run the tests with `--test-threads 1` like so:
+```sh
+cargo test -- --test-threads 1
+```
+The tests should pass when executed in sequence, not in parallel.
+
+
 ## Try it out
 The binding itself is auto-generated using bindgen from the ingescape C headers.
 Then the lib.rs file includes tests of the "unsafe" generated APIs.
