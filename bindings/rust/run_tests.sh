@@ -32,7 +32,7 @@ done
 
 (
     cd $SCRIPT_DIR
-    cargo test -- --nocapture --tests-threads 1
+    cargo test -- --nocapture --test-threads 1
 )
 
 exit 0
