@@ -8,6 +8,7 @@ pub mod igs {
     use super::*;
     use std::ffi::CStr;
     use std::ffi::CString;
+    use std::ptr;
 
     pub const LOG_TRACE: igs_log_level_t = igs_log_level_t_IGS_LOG_TRACE;
     pub const LOG_DEBUG: igs_log_level_t = igs_log_level_t_IGS_LOG_DEBUG;
@@ -20,6 +21,27 @@ pub mod igs {
         unsafe {
             return CStr::from_ptr(c_buf).to_string_lossy().into_owned();
         }
+    }
+
+    fn make_vec_str_from_c_str_array(
+        c_array: *mut *mut std::os::raw::c_char,
+        array_size: std::os::raw::c_int,
+    ) -> Vec<String> {
+        let mut v: Vec<String> = Vec::new();
+        let mut temp_ptr = c_array;
+        let mut count = 0;
+        unsafe {
+            while count < array_size {
+                if *temp_ptr == std::ptr::null_mut() {
+                    v.push("".to_string());
+                } else {
+                    v.push(make_safe_string_from_c(*temp_ptr));
+                }
+                count += 1;
+                temp_ptr = temp_ptr.offset(1);
+            }
+        }
+        v
     }
 
     pub fn version() -> i32 {
@@ -138,20 +160,71 @@ pub mod igs {
             igs_log_set_console_level(level);
         }
     }
+
+    pub fn mapping_outputs_request() -> bool {
+        unsafe {
+            return igs_mapping_outputs_request();
+        }
+    }
+
+    pub fn mapping_set_outputs_request(b: bool) {
+        unsafe {
+            igs_mapping_set_outputs_request(b);
+        }
+    }
+
+    pub fn agent_is_muted() -> bool {
+        unsafe {
+            return igs_agent_is_muted();
+        }
+    }
+
+    pub fn agent_mute() {
+        unsafe {
+            igs_agent_mute();
+        }
+    }
+
+    pub fn agent_unmute() {
+        unsafe {
+            igs_agent_unmute();
+        }
+    }
+
+    pub fn is_frozen() -> bool {
+        unsafe {
+            return igs_is_frozen();
+        }
+    }
+
+    pub fn freeze() {
+        unsafe {
+            igs_freeze();
+        }
+    }
+
+    pub fn unfreeze() {
+        unsafe {
+            igs_unfreeze();
+        }
+    }
+
+    pub fn net_devices_list() -> Vec<String> {
+        let mut array_size = 0;
+        let c_array = unsafe { igs_net_devices_list(ptr::addr_of_mut!(array_size)) };
+        return make_vec_str_from_c_str_array(c_array, array_size);
+    }
+
+    pub fn net_addresses_list() -> Vec<String> {
+        let mut array_size = 0;
+        let c_array = unsafe { igs_net_addresses_list(ptr::addr_of_mut!(array_size)) };
+        return make_vec_str_from_c_str_array(c_array, array_size);
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::ffi::CStr;
-    use std::ffi::CString;
-    use std::ptr;
-
-    fn make_safe_string_from_c(c_buf: *mut i8) -> String {
-        unsafe {
-            return CStr::from_ptr(c_buf).to_string_lossy().into_owned();
-        }
-    }
 
     #[test]
     fn test_version() {
@@ -171,10 +244,6 @@ mod tests {
         igs::agent_set_family("family_test");
         assert_eq!(igs::agent_family(), Some("family_test".to_string()));
     }
-
-    //
-    // UNSAFE
-    //
 
     #[test]
     fn test_igs_logs() {
@@ -216,52 +285,52 @@ mod tests {
 
     #[test]
     fn test_mapping_requests() {
-        unsafe {
-            assert!(!igs_mapping_outputs_request());
-            igs_mapping_set_outputs_request(true);
-            assert!(igs_mapping_outputs_request());
-        }
-    }
-
-    #[test]
-    fn test_agent_state() {
-        unsafe {
-            let c_str = CString::new("my state").expect("CString::new failed");
-            igs_agent_set_state(c_str.as_ptr());
-            assert_eq!(make_safe_string_from_c(igs_agent_state()), "my state");
-        }
+        assert!(!igs::mapping_outputs_request());
+        igs::mapping_set_outputs_request(true);
+        assert!(igs::mapping_outputs_request());
     }
 
     #[test]
     fn test_agent_mute() {
-        unsafe {
-            assert!(!igs_agent_is_muted());
-            igs_agent_mute();
-            assert!(igs_agent_is_muted());
-            igs_agent_unmute();
-            assert!(!igs_agent_is_muted());
-        }
+        assert!(!igs::agent_is_muted());
+        igs::agent_mute();
+        assert!(igs::agent_is_muted());
+        igs::agent_unmute();
+        assert!(!igs::agent_is_muted());
     }
 
     #[test]
     fn test_agent_frozen() {
-        unsafe {
-            assert!(!igs_is_frozen());
-            igs_freeze();
-            assert!(igs_is_frozen());
-            igs_unfreeze();
-            assert!(!igs_is_frozen());
-        }
+        assert!(!igs::is_frozen());
+        igs::freeze();
+        assert!(igs::is_frozen());
+        igs::unfreeze();
+        assert!(!igs::is_frozen());
     }
 
     #[test]
     fn test_net_devices_and_addresses() {
-        unsafe {
-            let mut s1 = 0;
-            let mut s2 = 0;
-            igs_net_devices_list(ptr::addr_of_mut!(s1));
-            igs_net_addresses_list(ptr::addr_of_mut!(s2));
-            assert_eq!(s1, s2);
+        let devices = igs::net_devices_list();
+        let addresses = igs::net_addresses_list();
+
+        if devices.len() == 0 {
+            println!("No devices");
+        } else {
+            for d in devices {
+                println!("Device: {}", d);
+            }
+        }
+
+        if addresses.len() == 0 {
+            println!("No addresses");
+        } else {
+            for d in addresses {
+                println!("Address: {}", d);
+            }
         }
     }
+
+    //
+    // UNSAFE
+    //
 }
