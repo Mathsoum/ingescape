@@ -10,13 +10,9 @@ pub mod igs {
     use std::ffi::CString;
     use std::ptr;
 
-    pub const LOG_TRACE: igs_log_level_t = igs_log_level_t_IGS_LOG_TRACE;
-    pub const LOG_DEBUG: igs_log_level_t = igs_log_level_t_IGS_LOG_DEBUG;
-    pub const LOG_INFO: igs_log_level_t = igs_log_level_t_IGS_LOG_INFO;
-    pub const LOG_WARN: igs_log_level_t = igs_log_level_t_IGS_LOG_WARN;
-    pub const LOG_ERROR: igs_log_level_t = igs_log_level_t_IGS_LOG_ERROR;
-    pub const LOG_FATAL: igs_log_level_t = igs_log_level_t_IGS_LOG_FATAL;
-
+    //
+    // Utilities
+    //
     fn make_safe_string_from_c(c_buf: *mut i8) -> String {
         unsafe {
             return CStr::from_ptr(c_buf).to_string_lossy().into_owned();
@@ -44,8 +40,38 @@ pub mod igs {
         v
     }
 
+    //
+    // Types and constants
+    //
+
+    pub type log_level_t = igs_log_level_t;
+    pub const LOG_TRACE: log_level_t = igs_log_level_t_IGS_LOG_TRACE;
+    pub const LOG_DEBUG: log_level_t = igs_log_level_t_IGS_LOG_DEBUG;
+    pub const LOG_INFO: log_level_t = igs_log_level_t_IGS_LOG_INFO;
+    pub const LOG_WARN: log_level_t = igs_log_level_t_IGS_LOG_WARN;
+    pub const LOG_ERROR: log_level_t = igs_log_level_t_IGS_LOG_ERROR;
+    pub const LOG_FATAL: log_level_t = igs_log_level_t_IGS_LOG_FATAL;
+
+    pub type io_value_type = igs_io_value_type_t;
+    pub const UNKNOWN_T: io_value_type = igs_io_value_type_t_IGS_UNKNOWN_T;
+    pub const IMPULSION_T: io_value_type = igs_io_value_type_t_IGS_IMPULSION_T;
+    pub const BOOL_T: io_value_type = igs_io_value_type_t_IGS_BOOL_T;
+    pub const INTEGER_T: io_value_type = igs_io_value_type_t_IGS_INTEGER_T;
+    pub const DOUBLE_T: io_value_type = igs_io_value_type_t_IGS_DOUBLE_T;
+    pub const STRING_T: io_value_type = igs_io_value_type_t_IGS_STRING_T;
+    pub const DATA_T: io_value_type = igs_io_value_type_t_IGS_DATA_T;
+
+    pub type result_t = igs_result_t;
+    pub const SUCCESS_T: result_t = igs_result_t_IGS_SUCCESS;
+    pub const FAILURE_T: result_t = igs_result_t_IGS_FAILURE;
+
+    //
     pub fn version() -> i32 {
         unsafe { return igs_version() }
+    }
+
+    pub fn protocol() -> i32 {
+        unsafe { return igs_protocol() }
     }
 
     pub fn agent_name() -> String {
@@ -75,6 +101,12 @@ pub mod igs {
         let c_str = CString::new(family).expect("CString::new failed");
         unsafe {
             igs_agent_set_family(c_str.as_ptr());
+        }
+    }
+
+    pub fn agent_uuid() -> String {
+        unsafe {
+            return make_safe_string_from_c(igs_agent_uuid());
         }
     }
 
@@ -149,13 +181,13 @@ pub mod igs {
         }
     }
 
-    pub fn log_console_level() -> igs_log_level_t {
+    pub fn log_console_level() -> log_level_t {
         unsafe {
             return igs_log_console_level();
         }
     }
 
-    pub fn log_set_console_level(level: igs_log_level_t) {
+    pub fn log_set_console_level(level: log_level_t) {
         unsafe {
             igs_log_set_console_level(level);
         }
@@ -220,6 +252,52 @@ pub mod igs {
         let c_array = unsafe { igs_net_addresses_list(ptr::addr_of_mut!(array_size)) };
         return make_vec_str_from_c_str_array(c_array, array_size);
     }
+
+    //
+    // Start/Stop
+    //
+    pub fn start_with_device(name: &str, port: u32) -> result_t {
+        let c_str = CString::new(name).expect("CString::new failed");
+        unsafe {
+            return igs_start_with_device(c_str.as_ptr(), port);
+        }
+    }
+
+    pub fn stop() {
+        unsafe {
+            igs_stop();
+        }
+    }
+
+    pub fn is_started() -> bool {
+        unsafe {
+            return igs_is_started();
+        }
+    }
+
+    //
+    // Definitions
+    //
+
+    pub fn input_count() -> usize {
+        unsafe {
+            return igs_input_count();
+        }
+    }
+
+    pub fn input_create(name: &str, value_type: io_value_type) -> result_t {
+        let c_str = CString::new(name).expect("CString::new failed");
+        unsafe {
+            return igs_input_create(c_str.as_ptr(), value_type, std::ptr::null_mut(), 0);
+        }
+    }
+
+    pub fn input_remove(name: &str) -> result_t {
+        let c_str = CString::new(name).expect("CString::new failed");
+        unsafe {
+            return igs_input_remove(c_str.as_ptr());
+        }
+    }
 }
 
 #[cfg(test)]
@@ -228,7 +306,12 @@ mod tests {
 
     #[test]
     fn test_version() {
-        assert_eq!(igs::version(), 040105);
+        assert!(igs::version() >= 040105);
+    }
+
+    #[test]
+    fn test_protocol() {
+        assert!(igs::protocol() >= 2);
     }
 
     #[test]
@@ -243,6 +326,11 @@ mod tests {
         assert_eq!(igs::agent_family(), None);
         igs::agent_set_family("family_test");
         assert_eq!(igs::agent_family(), Some("family_test".to_string()));
+    }
+
+    #[test]
+    fn test_agent_uuid() {
+        assert_ne!(igs::agent_uuid(), "");
     }
 
     #[test]
@@ -330,7 +418,50 @@ mod tests {
         }
     }
 
-    //
-    // UNSAFE
-    //
+    #[test]
+    fn test_igs_security() {
+        //TODO
+    }
+
+    //TODO Definition & callbacks
+
+    #[test]
+    fn test_inputs() {
+        assert_eq!(igs::input_count(), 0);
+        let res = igs::input_create("input1", igs::STRING_T);
+        assert_eq!(res, igs::SUCCESS_T);
+        assert_eq!(igs::input_count(), 1);
+        let res = igs::input_create("input1", igs::STRING_T);
+        assert_eq!(res, igs::FAILURE_T);
+        assert_eq!(igs::input_count(), 1);
+        let res = igs::input_create("input2", igs::STRING_T);
+        assert_eq!(res, igs::SUCCESS_T);
+        assert_eq!(igs::input_count(), 2);
+
+        let res = igs::input_remove("input1");
+        assert_eq!(res, igs::SUCCESS_T);
+        assert_eq!(igs::input_count(), 1);
+        let res = igs::input_remove("input2");
+        assert_eq!(res, igs::SUCCESS_T);
+        assert_eq!(igs::input_count(), 0);
+        let res = igs::input_remove("non_existing_input");
+        assert_eq!(res, igs::FAILURE_T);
+        assert_eq!(igs::input_count(), 0);
+    }
+
+    #[test]
+    fn test_start_stop() {
+        let devices = igs::net_devices_list();
+        let mut res = igs::SUCCESS_T;
+        assert!(!igs::is_started());
+        if !devices.is_empty() {
+            res = igs::start_with_device(devices[0].as_str(), 12345);
+            assert_eq!(res, igs::SUCCESS_T);
+            assert!(igs::is_started());
+            igs::stop();
+            assert!(!igs::is_started());
+        } else {
+            assert_eq!(res, igs::SUCCESS_T);
+        }
+    }
 }
