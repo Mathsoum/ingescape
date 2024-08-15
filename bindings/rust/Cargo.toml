@@ -1,5 +1,5 @@
 [package]
-name = "ingescape-sys"
+name = "ingescape"
 version = "4.1.5"
 edition = "2021"
 

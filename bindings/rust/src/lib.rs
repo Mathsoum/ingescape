@@ -174,6 +174,21 @@ pub mod igs {
         }
     }
 
+    pub fn log_set_file(activate: bool, path: Option<&str>) {
+        unsafe {
+            match path {
+                Some(p) => {
+                    let c_str = CString::new(p).expect("CString::new failed");
+                    igs_log_set_file(activate, c_str.as_ptr());
+                }
+                None => {
+                    let null_ptr: *const i8 = std::ptr::null_mut();
+                    igs_log_set_file(activate, null_ptr);
+                }
+            }
+        }
+    }
+
     pub fn log_set_file_path(path: &str) {
         let c_str = CString::new(path).expect("CString::new failed");
         unsafe {
@@ -448,7 +463,11 @@ mod tests {
 
         assert!(!igs::log_file());
         assert_eq!(igs::log_file_path(), None);
+        igs::log_set_file(true, None);
+        assert!(igs::log_file());
+        assert_eq!(igs::log_file_path(), None);
         igs::log_set_file_path("/tmp/log.txt");
+        assert!(igs::log_file());
         assert_eq!(igs::log_file_path(), Some("/tmp/log.txt".to_string()));
 
         // Here we test all LOG_XXX constants so they are used somewhere and no unused warning is raised
