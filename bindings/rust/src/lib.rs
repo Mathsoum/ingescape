@@ -285,6 +285,101 @@ pub mod igs {
         }
     }
 
+    pub fn output_count() -> usize {
+        unsafe {
+            return igs_output_count();
+        }
+    }
+
+    pub fn attribute_count() -> usize {
+        unsafe {
+            return igs_attribute_count();
+        }
+    }
+
+    pub fn input_exists(name: &str) -> bool {
+        let c_str = CString::new(name).expect("CString::new failed");
+        unsafe {
+            return igs_input_exists(c_str.as_ptr());
+        }
+    }
+
+    pub fn output_exists(name: &str) -> bool {
+        let c_str = CString::new(name).expect("CString::new failed");
+        unsafe {
+            return igs_output_exists(c_str.as_ptr());
+        }
+    }
+
+    pub fn attribute_exists(name: &str) -> bool {
+        let c_str = CString::new(name).expect("CString::new failed");
+        unsafe {
+            return igs_attribute_exists(c_str.as_ptr());
+        }
+    }
+
+    pub fn input_list() -> Vec<String> {
+        let mut array_size = 0;
+        let c_array = unsafe { igs_input_list(ptr::addr_of_mut!(array_size)) };
+        return make_vec_str_from_c_str_array(c_array, array_size as i32);
+    }
+
+    pub fn output_list() -> Vec<String> {
+        let mut array_size = 0;
+        let c_array = unsafe { igs_output_list(ptr::addr_of_mut!(array_size)) };
+        return make_vec_str_from_c_str_array(c_array, array_size as i32);
+    }
+
+    pub fn attribute_list() -> Vec<String> {
+        let mut array_size = 0;
+        let c_array = unsafe { igs_attribute_list(ptr::addr_of_mut!(array_size)) };
+        return make_vec_str_from_c_str_array(c_array, array_size as i32);
+    }
+
+    pub fn output_is_muted(name: &str) -> bool {
+        let c_str = CString::new(name).expect("CString::new failed");
+        unsafe {
+            return igs_output_is_muted(c_str.as_ptr());
+        }
+    }
+
+    pub fn input_bool(name: &str) -> bool {
+        let c_str = CString::new(name).expect("CString::new failed");
+        unsafe {
+            return igs_input_bool(c_str.as_ptr());
+        }
+    }
+
+    pub fn input_int(name: &str) -> i32 {
+        let c_str = CString::new(name).expect("CString::new failed");
+        unsafe {
+            return igs_input_int(c_str.as_ptr());
+        }
+    }
+
+    pub fn input_double(name: &str) -> f64 {
+        let c_str = CString::new(name).expect("CString::new failed");
+        unsafe {
+            return igs_input_double(c_str.as_ptr());
+        }
+    }
+
+    pub fn input_string(name: &str) -> String {
+        let c_str = CString::new(name).expect("CString::new failed");
+        unsafe {
+            let c_str_value = igs_input_string(c_str.as_ptr());
+            if c_str_value == std::ptr::null_mut() {
+                return "".to_string();
+            } else {
+                return make_safe_string_from_c(c_str_value);
+            }
+        }
+    }
+
+    pub fn input_data(_name: &str) -> Vec<u8> {
+        todo!();
+    }
+
     pub fn input_create(name: &str, value_type: io_value_type) -> result_t {
         let c_str = CString::new(name).expect("CString::new failed");
         unsafe {
@@ -426,7 +521,29 @@ mod tests {
     //TODO Definition & callbacks
 
     #[test]
-    fn test_inputs() {
+    fn test_definition() {
+        // Empty definition at init
+        assert_eq!(igs::input_count(), 0);
+        assert_eq!(igs::output_count(), 0);
+        assert_eq!(igs::attribute_count(), 0);
+        assert!(!igs::input_exists("non_existing"));
+        assert!(!igs::output_exists("non_existing"));
+        assert!(!igs::attribute_exists("non_existing"));
+        let empty_string_vec: Vec<String> = vec![];
+        assert_eq!(igs::input_list(), empty_string_vec);
+        assert_eq!(igs::output_list(), empty_string_vec);
+        assert_eq!(igs::attribute_list(), empty_string_vec);
+
+        // Non existing fallback values
+        assert!(!igs::output_is_muted("non_existing"));
+        assert!(!igs::input_bool("non_existing"));
+        assert_eq!(igs::input_int("non_existing"), 0);
+        assert_eq!(igs::input_double("non_existing"), 0.0);
+        assert_eq!(igs::input_string("non_existing"), "");
+        //DATA NOT HANDLED YET
+        // let empty_binary_vec: Vec<u8> = vec![];
+        // assert_eq!(igs::input_data("non_existing"), empty_binary_vec);
+
         assert_eq!(igs::input_count(), 0);
         let res = igs::input_create("input1", igs::STRING_T);
         assert_eq!(res, igs::SUCCESS_T);
