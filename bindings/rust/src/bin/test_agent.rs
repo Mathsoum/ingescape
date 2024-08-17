@@ -7,7 +7,13 @@ fn main() {
     igs::agent_set_name("rust_agent");
     igs::log_set_file(true, None);
     igs::log_set_console(true);
-    let res = igs::start_with_device("en0", 1330);
-    println!("res: {}", res);
+    let device = "en0";
+    let port = 1337;
+    println!(
+        "Start with {} {} => result: {}",
+        device,
+        port,
+        igs::start_with_device(device, port)
+    );
     loop {}
 }
